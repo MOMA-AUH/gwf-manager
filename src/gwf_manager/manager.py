@@ -215,7 +215,7 @@ def _create_clean_up_target(manager: Manager):
 
     outputs = {
         "done_flag": manager.output_file(
-            ".flags",
+            "flags",
             "done.flag",
             mkdir=True,
         ),
