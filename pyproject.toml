@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gwf-manager"
+version = "0.1.0"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Jakob Jersild Nielsen" }]
+keywords = ["workflow", "bioinformatics", "gwf", "pipeline"]
+
+dependencies = ["gwf>=2.0.0", "attrs>=23.0.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0.0", "pytest-cov>=4.0.0", "ruff>=0.1.0"]
+
+[project.urls]
+Homepage = "https://github.com/MOMA-AUH/gwf-manager"
+Repository = "https://github.com/MOMA-AUH/gwf-manager"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
