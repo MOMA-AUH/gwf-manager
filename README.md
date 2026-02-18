@@ -5,7 +5,7 @@ A high-level framework for building reproducible bioinformatics workflows with [
 ## Installation
 
 ```bash
-pip install gwf-manager
+pip install git+https://github.com/MOMA-AUH/gwf-manager.git
 ```
 
 **Requirements:** Python ≥ 3.8, [gwf](https://gwf.app/) ≥ 2.0, [attrs](https://www.attrs.org/) ≥ 23.0
