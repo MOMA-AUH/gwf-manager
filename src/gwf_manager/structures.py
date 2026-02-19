@@ -49,6 +49,13 @@ class SubclassRegistry(dict):
 class Configuration(dict):
     """A dictionary subclass for managing nested configurations."""
 
+    @classmethod
+    def from_file(cls, path: str | Path | None) -> "Configuration":
+        config = cls()
+        if path is not None:
+            config.load(path)
+        return config
+
     def load(self, path: str | Path) -> None:
         if self:
             logging.debug("Configuration has already been set and cannot be modified.")
@@ -98,8 +105,3 @@ def _get_recursive(current_data: dict, path: list[str], full_path: list[str]) ->
         )
 
     return _get_recursive(next_value, remaining_path, full_path)
-
-
-reference = Configuration()
-resources = Configuration()
-parameters = Configuration()
