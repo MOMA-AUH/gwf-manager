@@ -2,6 +2,7 @@ import attrs
 from collections import defaultdict
 from pathlib import Path
 
+from .conf import config
 from .executors import setup_conda_executors
 from .gwf_imports import AnonymousTarget, Workflow
 from .path import HashablePath, TemporaryPath
@@ -19,32 +20,12 @@ class Task:
 class Manager:
     """Helper class to keep track of targets."""
 
-    def __init__(
-        self,
-        gwf: Workflow,
-        clean_up: bool = True,
-        # Config paths
-        parameters_json: str | Path | None = "input/parameters.json",
-        reference_json: str | Path | None = "input/reference.json",
-        resources_json: str | Path | None = "input/resources.json",
-        # Conda config
-        conda_config_dir: str | Path | None = "input/conda",
-        conda_envs_dir: str | Path | None = "conda_envs",
-    ) -> None:
+    def __init__(self, gwf: Workflow, clean_up: bool = True) -> None:
         self.gwf = gwf
         self.clean_up = clean_up
 
         self.targets: dict[str, AnonymousTarget] = {}
         self.tasks: dict[str, Task] = defaultdict(Task)
-
-        if parameters_json is not None:
-            parameters.load(parameters_json)
-        if reference_json is not None:
-            reference.load(reference_json)
-        if resources_json is not None:
-            resources.load(resources_json)
-        if conda_config_dir is not None and conda_envs_dir is not None:
-            setup_conda_executors(conda_config_dir, conda_envs_dir)
 
     def __enter__(self):
         return self

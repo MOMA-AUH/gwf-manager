@@ -1,5 +1,6 @@
 import attrs
 import hashlib
+import logging
 import shutil
 import subprocess
 from pathlib import Path
@@ -76,11 +77,20 @@ def _get_or_create_conda_env(yaml: Path, envs_dir: Path) -> Path:
 executor_registry = InstanceRegistry(type=object)
 
 
-def setup_conda_executors(config_dir: str | Path, envs_dir: str | Path) -> None:
+def setup_conda_executors(
+    registry: InstanceRegistry,
+    config_dir: str | Path | None,
+    envs_dir: str | Path | None,
+) -> None:
+    if config_dir is None or envs_dir is None:
+        logging.debug(
+            "Conda configuration directory or environments directory not specified. Skipping Conda executor setup."
+        )
+        return
     _find_conda_executable()
     config_dir = Path(config_dir)
     envs_dir = Path(envs_dir)
     envs_dir.mkdir(parents=True, exist_ok=True)
     for ext in YAML_EXTENSIONS:
         for yaml in config_dir.glob(ext):
-            executor_registry[yaml.stem] = _get_or_create_conda_env(yaml, envs_dir)
+            registry[yaml.stem] = _get_or_create_conda_env(yaml, envs_dir)
