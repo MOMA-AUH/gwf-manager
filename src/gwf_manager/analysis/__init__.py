@@ -1,6 +1,7 @@
 from enum import Enum
 
-from .core import Analysis, AnalysisList, analysis_kind_enum
+from . import core
+from .core import Analysis, AnalysisList
 from .addon import addon_registry
 
 
@@ -14,8 +15,7 @@ def setup_analysis_module(
         kind: Enum class defining analysis kinds.
         addons: Optional dict mapping addon keys to Enum classes.
     """
-    global analysis_kind_enum
-    analysis_kind_enum = kind
+    core.analysis_kind_enum = kind
 
     if addons is not None:
         addon_registry.clear()
