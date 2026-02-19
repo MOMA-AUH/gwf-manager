@@ -1,12 +1,8 @@
 import attrs
 from collections import defaultdict
-from pathlib import Path
 
-from .conf import config
-from .executors import setup_conda_executors
 from .gwf_imports import AnonymousTarget, Workflow
 from .path import HashablePath, TemporaryPath
-from .structures import parameters, reference, resources
 from .utilities import legalize_for_gwf
 
 
