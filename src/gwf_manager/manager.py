@@ -2,6 +2,7 @@ import attrs
 from collections import defaultdict
 from pathlib import Path
 
+from .exceptions import DuplicateTargetError, OutputNotFoundError, TaskNotFoundError
 from .gwf_imports import AnonymousTarget, Workflow
 from .path import TemporaryPath
 from .utilities import legalize_for_gwf
@@ -48,14 +49,16 @@ class Manager:
             AnonymousTarget: The submitted target.
 
         Raises:
-            AssertionError: If the spec of the resubmitted target with the given name differ from the spec of the previously
-                            submitted target.
+            DuplicateTargetError: If the spec of the resubmitted target with the given name differs from the spec of the
+                                  previously submitted target.
         """
         if name in self.targets:
             existing_template = self.targets[name]
-            assert (
-                existing_template.spec == template.spec
-            ), f"""Differing spec of resubmitted target '{name}'{f" in task '{task_id}'" if task_id is not None else ""}"""
+            if existing_template.spec != template.spec:
+                msg = f"Differing spec of resubmitted target '{name}'"
+                if task_id is not None:
+                    msg += f" in task '{task_id}'"
+                raise DuplicateTargetError(msg)
             template = existing_template
         else:
             self.targets[name] = template
@@ -153,9 +156,11 @@ class Manager:
         output_name: str,
     ) -> str:
         if task_id not in self.tasks:
-            raise Exception(f"Task output {task_id} does not exist!")
+            raise TaskNotFoundError(f"Task '{task_id}' does not exist.")
         if output_name not in self.tasks[task_id].outputs:
-            raise Exception(f"Output {output_name} does not exist for task {task_id}!")
+            raise OutputNotFoundError(
+                f"Output '{output_name}' does not exist for task '{task_id}'."
+            )
         return self.tasks[task_id].outputs[output_name]
 
 

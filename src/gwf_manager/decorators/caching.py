@@ -1,6 +1,7 @@
 import hashlib
 from functools import wraps
 
+from ..exceptions import GwfManagerError, TaskOutputError
 from ..gwf_imports import AnonymousTarget
 from ..manager import Manager
 from ..sample import Sample
@@ -10,10 +11,11 @@ from ..utilities import flatten
 def cache_task(func):
     @wraps(func)
     def wrapped(*args, **kwargs):
-        try:
-            manager: Manager = kwargs["manager"]
-        except KeyError:
-            raise Exception("Manager object not found in kwargs!")
+        manager: Manager | None = kwargs.get("manager")
+        if manager is None:
+            raise GwfManagerError(
+                f"'{func.__name__}' requires 'manager' as a keyword argument."
+            )
 
         task_id_parts = [func.__name__]
         for v in kwargs.values():
@@ -43,7 +45,9 @@ def cache_task(func):
         # Run the task and update the sha256 hash with its outputs
         task_outputs = func(*args, **kwargs, task_id=task_id) or {}
         if not isinstance(task_outputs, dict):
-            raise Exception("Task outputs must be a dictionary or None.")
+            raise TaskOutputError(
+                f"Task '{task_id}' must return a dict or None, got {type(task_outputs).__name__}."
+            )
 
         for output in sorted(flatten(task_outputs)):
             sha256.update(str(output).encode("utf-8"))
