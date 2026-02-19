@@ -28,7 +28,23 @@ with Manager(gwf) as manager:
 
 When the `with` block exits, the `Manager` automatically finalises the workflow — submitting all registered targets to gwf and appending a clean-up target that removes temporary directories.
 
----
+### Project structure
+
+A typical pipeline using `gwf-manager` follows this layout:
+
+```
+.managerconf.json         # Optional overrides for default paths
+input/
+├── parameters.json       # Pipeline parameters
+├── reference.json        # Reference file paths
+├── resources.json        # Cluster resource defaults (cores, memory, walltime)
+├── samples.json          # Sample definitions
+├── analyses.json         # Analysis definitions
+└── conda/                # Conda environment YAMLs
+    ├── env_a.yaml
+    └── env_b.yaml
+workflow.py               # gwf workflow entry point
+```
 
 ## Core concepts
 
@@ -40,29 +56,42 @@ The `Manager` class is the central orchestrator. It wraps a gwf `Workflow` and p
 |---|---|
 | **Target tracking** | Deduplicates targets by name — resubmitting a target with an identical spec is safe; differing specs raise an error. |
 | **Task grouping** | Targets can be grouped into *tasks* via a `task_id`. A task can be marked as *should not submit* (e.g. by the caching decorator) to skip all of its targets at once. |
-| **Configuration loading** | Automatically loads `parameters.json`, `reference.json`, and `resources.json` from an `input/` directory. |
-| **Conda integration** | Discovers Conda environment YAML files in `input/conda/` and creates content-addressed environments in `conda_envs/`. |
 | **Clean-up target** | Optionally appends a final target that removes `temp/` and `scratch/` directories after all other work completes. |
 | **Path helpers** | Convenience methods (`output_dir`, `output_file`, `temp_dir`, `temp_file`) for building structured output and temporary paths. |
 
 ```python
-with Manager(
-    gwf,
-    clean_up=True,
-    parameters_json="input/parameters.json",
-    reference_json="input/reference.json",
-    resources_json="input/resources.json",
-    conda_config_dir="input/conda",
-    conda_envs_dir="conda_envs",
-) as manager:
+with Manager(gwf, clean_up=True) as manager:
     ...
 ```
 
----
+> **Note:** Configuration loading and Conda environment setup happen automatically at import time (see [Configuration](#configuration) and [Conda executors](#conda-executors) below). The `Manager` itself only needs the gwf `Workflow` instance.
+
+#### Default paths
+
+| Key | Default path |
+|---|---|
+| `parameters_json` | `input/parameters.json` |
+| `reference_json` | `input/reference.json` |
+| `resources_json` | `input/resources.json` |
+| `conda_config_dir` | `input/conda` |
+
+#### Overriding defaults with `.managerconf.json`
+
+Place a `.managerconf.json` file in the working directory (or any parent directory) to override any of the default paths:
+
+```json
+{
+    "parameters_json": "config/my_parameters.json",
+    "conda_config_dir": "config/conda",
+    "conda_envs_dir": "/shared/conda_envs"
+}
+```
+
+`gwf-manager` searches upward from the current working directory for the first `.managerconf.json` it finds. Values from the file take precedence over the built-in defaults via a `ChainMap`.
 
 ### Configuration
 
-Three global `Configuration` objects are available for storing pipeline-wide settings loaded from JSON files:
+When `gwf_manager` is first imported, three global `Configuration` objects are populated from JSON files:
 
 ```python
 from gwf_manager import parameters, reference, resources
@@ -77,97 +106,23 @@ reference.get_in("genome", "fasta")  # returns "/refs/hg38.fa"
 
 Configurations are loaded once; subsequent calls to `load()` are silently ignored to prevent accidental overwrites.
 
----
+### Conda executors
 
-### Sample
+`gwf-manager` automatically discovers Conda environment YAML files (`.yaml` / `.yml`) in the configured `conda_config_dir` and creates **content-addressed** environments in `conda_envs_dir`. An SHA256 hash of the YAML content is appended to the environment name, so any change to the YAML triggers a fresh environment build while old environments remain intact.
 
-A `Sample` bundles a sample name with one or more sequencing data entries and optional metadata.
-
-```python
-from gwf_manager import Sample, SampleList
-
-samples = SampleList.from_path("input/samples.json")
-```
-
-**Sequencing data types** — built-in and registered automatically:
-
-| Type | Fields |
-|---|---|
-| `PairedEndFASTQ` | `r1`, `r2` |
-| `SingleEndFASTQ` | `file` |
-| `Spring` | `files` |
-| `UBAM` | `file` |
-| `UCRAM` | `file` |
-
-All types share common fields: `library`, `technology`, `instrument`, `flowcell`, and `lane`, which are used to construct SAM-spec read groups (`@RG`).
-
-**Metadata** — samples can carry typed metadata backed by Enum classes:
+Discovered executors are stored in a global `executor_registry` and can be referenced by YAML stem name:
 
 ```python
-from enum import Enum
-from gwf_manager import setup_sample_module
+from gwf_manager import executor_registry
 
-class Sex(Enum):
-    male = "male"
-    female = "female"
-
-setup_sample_module(metadata={"sex": Sex})
+conda_env = executor_registry["env_a"]  # Conda instance for env_a.yaml
 ```
-
-String values in the input JSON are automatically converted to the corresponding Enum member.
-
-**Subsetting** — `SampleList` supports filtering by name or metadata:
-
-```python
-subset = samples.subset_by_names("SampleA", "SampleB")
-males  = samples.subset_by_metadata(sex="male")
-```
-
-**SHA-256 checksums** — each `Sample` and `SampleList` exposes a `sha256` property derived from read group IDs, useful for change detection and caching.
-
----
-
-### Analysis
-
-An `Analysis` groups a *kind* (an Enum member), optional *addons*, and a list of `Sample` objects. This is useful for pipelines that run different analysis types (e.g. WGS, WES, RNA-seq) over subsets of samples.
-
-```python
-from enum import Enum
-from gwf_manager import setup_analysis_module, AnalysisList
-
-class AnalysisKind(Enum):
-    wgs = "wgs"
-    wes = "wes"
-
-setup_analysis_module(kind=AnalysisKind)
-
-analyses = AnalysisList.from_path("input/analyses.json", sample_list=samples)
-```
-
-**Addons** let you attach optional flags or features to analyses:
-
-```python
-class QC(Enum):
-    fastqc = "fastqc"
-    multiqc = "multiqc"
-
-setup_analysis_module(kind=AnalysisKind, addons={"qc": QC})
-```
-
-**Subsetting** — filter by kind or addon:
-
-```python
-wgs_analyses = analyses.subset_by_kind(AnalysisKind.wgs)
-qc_analyses  = analyses.subset_by_addon(QC.fastqc)
-```
-
----
 
 ### Decorators
 
-#### `@cache_task` — SHA-256-based task caching
+#### `@cache_task` — SHA256-based task caching
 
-Wraps a task function so that it is only submitted when its inputs or outputs have changed. The decorator computes a SHA-256 hash from the sample's read group IDs and the task's declared outputs, then compares it against a cached hash on disk.
+Wraps a task function so that it is only submitted when its inputs or outputs have changed. The decorator computes a SHA256 hash from the sample's read group IDs and the task's declared outputs, then compares it against a cached hash on disk.
 
 ```python
 from gwf_manager import cache_task
@@ -199,42 +154,222 @@ def my_other_template(**kwargs):
 
 `@use_wd_scratch` creates the scratch directory relative to the working directory at `scratch/<function_name>/$SLURM_JOB_ID`.
 
----
+### Sample
 
-### Conda executors
+A `Sample` bundles a sample name with one or more sequencing data entries and optional metadata.
 
-The `Manager` automatically discovers Conda environment YAML files (`.yaml` / `.yml`) in the configured `conda_config_dir` and creates **content-addressed** environments in `conda_envs/`. A hash of the YAML content is appended to the environment name, so any change to the YAML triggers a fresh environment build while old environments remain intact.
+```python
+from gwf_manager import Sample, SampleList
 
-Discovered executors are stored in a global `executor_registry` and can be referenced by YAML stem name.
-
----
-
-### Registries
-
-Two type-safe registry classes underpin the extensibility of samples, analyses, and executors:
-
-- **`SubclassRegistry`** — ensures registered values are subclasses of a given type (used for sequencing data types and metadata/addon Enum classes).
-- **`InstanceRegistry`** — ensures registered values are instances of a given type (used for executor instances).
-
-Both raise on duplicate keys or type mismatches, catching configuration errors early.
-
----
-
-## Project structure
-
+samples = SampleList.from_path("input/samples.json")
 ```
-input/
-├── parameters.json       # Pipeline parameters
-├── reference.json        # Reference file paths
-├── resources.json        # Cluster resource defaults (cores, memory, walltime)
-├── samples.json          # Sample definitions
-├── analyses.json         # Analysis definitions
-└── conda/                # Conda environment YAMLs
-    ├── env_a.yaml
-    └── env_b.yaml
-output/                   # Persistent results
-temp/                     # Intermediate files (cleaned up automatically)
-workflow.py               # gwf workflow entry point
+
+**Sequencing data types** — built-in and registered automatically:
+
+| Type | Fields |
+|---|---|
+| `PairedEndFASTQ` | `r1`, `r2` |
+| `SingleEndFASTQ` | `file` |
+| `Spring` | `files` |
+| `UBAM` | `file` |
+| `UCRAM` | `file` |
+
+All types share common fields: `library`, `technology`, `instrument`, `flowcell`, and `lane`, which are used to construct SAM-spec read groups (`@RG`).
+
+**Metadata** — samples can carry typed metadata backed by Enum classes:
+
+```python
+from enum import Enum, auto
+from gwf_manager import setup_sample_module
+
+class SampleKind(Enum):
+    NORMAL = auto()
+    TUMOR = auto()
+
+class MaterialKind(Enum):
+    DNA = auto()
+    RNA = auto()
+
+setup_sample_module(metadata={"sample_kind": SampleKind, "material_kind": MaterialKind})
+```
+
+String values in the input JSON are automatically converted to the corresponding Enum member.
+
+**Subsetting** — `SampleList` supports filtering by name or metadata:
+
+```python
+subset = samples.subset_by_names("SampleA", "SampleB")
+dna_samples  = samples.subset_by_metadata(material_kind="DNA")
+```
+
+**SHA-256 checksums** — each `Sample` and `SampleList` exposes a `sha256` property derived from read group IDs, useful for change detection and caching.
+
+#### Example `input/samples.json`
+
+```json
+[
+    {
+        "name": "BloodSample",
+        "metadata": {
+            "sample_kind": "NORMAL",
+            "material_kind": "DNA"
+        },
+        "data": [
+            {
+                "library": "SomeLibrary",
+                "technology": "Illumina",
+                "instrument": "SomeInstrument",
+                "flowcell": "SomeFlowcell",
+                "lane": "1",
+                "r1": "/SomeInstrument/SomeFlowcell/BloodSample_SomeLibrary_L001_R1_001.fastq.gz",
+                "r2": "/SomeInstrument/SomeFlowcell/BloodSample_SomeLibrary_L001_R2_001.fastq.gz"
+            }
+        ]
+    },
+    {
+        "name": "TumorBiopsyDNA",
+        "metadata": {
+            "sample_kind": "TUMOR",
+            "material_kind": "DNA"
+        },
+        "data": [
+            {
+                "library": "AnotherLibrary",
+                "technology": "Illumina",
+                "instrument": "AnotherInstrument",
+                "flowcell": "AnotherFlowcell",
+                "lane": "1",
+                "r1": "/AnotherIntrument/AnotherFlowcell/TumorBiopsy_AnotherLibrary_L001_R1_001.fastq.gz",
+                "r2": "/AnotherIntrument/AnotherFlowcell/TumorBiopsy_AnotherLibrary_L001_R2_001.fastq.gz"
+            },
+            {
+                "library": "AnotherLibrary",
+                "technology": "Illumina",
+                "instrument": "AnotherInstrument",
+                "flowcell": "AnotherFlowcell",
+                "lane": "2",
+                "r1": "/AnotherIntrument/AnotherFlowcell/TumorBiopsy_AnotherLibrary_L002_R1_001.fastq.gz",
+                "r2": "/AnotherIntrument/AnotherFlowcell/TumorBiopsy_AnotherLibrary_L002_R2_001.fastq.gz"
+            }
+        ]
+    },
+    {
+        "name": "TumorBiopsyRNA",
+        "metadata": {
+            "sample_kind": "TUMOR",
+            "material_kind": "RNA"
+        },
+        "data": [
+            {
+                "library": "YetAnotherLibrary",
+                "technology": "Illumina",
+                "instrument": "SomeInstrument",
+                "flowcell": "SomeFlowcell",
+                "lane": "1",
+                "r1": "/SomeInstrument/SomeFlowcell/TumorBiopsyRNA_YetAnotherLibrary_L001_R1_001.fastq.gz",
+                "r2": "/SomeInstrument/SomeFlowcell/TumorBiopsyRNA_YetAnotherLibrary_L001_R2_001.fastq.gz"
+            }
+        ]
+    },
+    {
+        "name": "AnotherTumorBiopsyDNA",
+        "metadata": {
+            "sample_kind": "TUMOR",
+            "material_kind": "DNA"
+        },
+        "data": [
+            {
+                "library": "2xYetAnotherLibrary",
+                "technology": "Illumina",
+                "instrument": "SomeInstrument",
+                "flowcell": "YetAnotherFlowcell",
+                "lane": "1",
+                "files": [
+                    "/SomeInstrument/YetAnotherFlowcell/AnotherTumorBiopsyDNA_2xYetAnotherLibrary_L001.spring"
+                ]
+            },
+            {
+                "library": "2xYetAnotherLibrary",
+                "technology": "Illumina",
+                "instrument": "SomeInstrument",
+                "flowcell": "YetAnotherFlowcell",
+                "lane": "2",
+                "files": [
+                    "/SomeInstrument/YetAnotherFlowcell/AnotherTumorBiopsyDNA_2xYetAnotherLibrary_L002.spring"
+                ]
+            }
+        ]
+    }
+]
+```
+
+### Analysis
+
+An `Analysis` groups a *kind* (an Enum member), optional *addons*, and a list of `Sample` objects. This is useful for pipelines that run different analysis types (e.g. germline, somatic (paired tumor-normal), somatic (tumor-only)) over subsets of samples.
+
+```python
+from enum import Enum, auto()
+from gwf_manager import setup_analysis_module, AnalysisList
+
+class AnalysisKind(Enum):
+    GERMLINE = auto()
+    SOMATIC_TUMOR_NORMAL = auto()
+    SOMATIC_TUMOR_ONLY = auto()
+
+setup_analysis_module(kind=AnalysisKind)
+
+analyses = AnalysisList.from_path("input/analyses.json", sample_list=samples)
+```
+
+**Addons** let you attach optional flags or features to analyses:
+
+```python
+class Caller(Enum):
+    FREEBAYES = auto()
+    DEEPVARIANT = auto()
+    DEEPSOMATIC = auto()
+
+setup_analysis_module(kind=AnalysisKind, addons={"caller": Caller})
+```
+
+**Subsetting** — filter by kind or addon:
+
+```python
+germline_analyses = analyses.subset_by_kind(AnalysisKind.GERMLINE)
+analyses_with_deepvariant_addon  = analyses.subset_by_addon(Caller.DEEPVARIANT)
+```
+
+#### Example `input/analyses.json`
+
+```json
+[
+    {
+        "samples": [
+            "BloodSample"
+        ],
+        "kind": "GERMLINE",
+        "addons": {
+            "caller": ["DEEPVARIANT"]
+        }
+    },
+    {
+        "samples": [
+            "BloodSample",
+            "TumorBiopsyDNA",
+            "TumorBiopsyRNA"
+        ],
+        "kind": "SOMATIC_TUMOR_NORMAL",
+        "addons": {
+            "caller": ["DEEPSOMATIC"]
+        }
+    },
+    {
+        "samples": [
+            "AnotherTumorBiopsyDNA"
+        ],
+        "kind": "SOMATIC_TUMOR_ONLY"
+    }
+]
 ```
 
 ## License
