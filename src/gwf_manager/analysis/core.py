@@ -20,8 +20,8 @@ class Analysis:
 class AnalysisList(list[Analysis]):
     def __init__(
         self,
-        sample_list: SampleList,
         *analyses: dict | Analysis,
+        sample_list: SampleList,
         analysis_type: type[Analysis] = Analysis,
     ):
         assert (
@@ -71,7 +71,7 @@ class AnalysisList(list[Analysis]):
             An AnalysisList instance containing the analyses specified in the JSON file.
         """
         analyses = json.loads(Path(path).read_text())
-        return cls(sample_list=sample_list, *analyses, analysis_type=analysis_type)
+        return cls(*analyses, sample_list=sample_list, analysis_type=analysis_type)
 
     def subset_by_kind(
         self,
@@ -86,8 +86,8 @@ class AnalysisList(list[Analysis]):
             An AnalysisList containing only analyses of the specified kinds.
         """
         return AnalysisList(
-            sample_list=self.sample_list,
             *[a for a in self if a.kind in analysis_kind],
+            sample_list=self.sample_list,
             analysis_type=self.analysis_type,
         )
 
@@ -104,7 +104,7 @@ class AnalysisList(list[Analysis]):
             An AnalysisList containing only analyses with the specified addons.
         """
         return AnalysisList(
-            sample_list=self.sample_list,
             *[a for a in self if a.addons.has(*addon)],
+            sample_list=self.sample_list,
             analysis_type=self.analysis_type,
         )
