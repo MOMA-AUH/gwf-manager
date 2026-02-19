@@ -9,6 +9,14 @@ metadata_registry = SubclassRegistry(type=Enum)
 class MetadataDict(dict):
     """A dictionary for storing sample metadata with automatic type conversion based on the metadata registry."""
 
+    def __init__(self, data=None, **kwargs):
+        super().__init__()
+        source = data.items() if isinstance(data, dict) else (data or [])
+        for k, v in source:
+            self[k] = v
+        for k, v in kwargs.items():
+            self[k] = v
+
     def __setitem__(self, key, value):
         if key in metadata_registry:
             enum_cls = metadata_registry[key]
