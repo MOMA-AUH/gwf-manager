@@ -49,8 +49,11 @@ reference = Configuration.from_file(config["reference_json"])
 resources = Configuration.from_file(config["resources_json"])
 
 executor_registry = InstanceRegistry(type=object)
-setup_conda_executors(
-    executor_registry, config["conda_config_dir"], config["conda_envs_dir"]
-)
+try:
+    setup_conda_executors(
+        executor_registry, config["conda_config_dir"], config["conda_envs_dir"]
+    )
+except Exception as e:
+    logging.warning("Conda executor setup failed: %s", e)
 
 __all__ = ["config", "executor_registry", "parameters", "reference", "resources"]
