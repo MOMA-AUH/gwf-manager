@@ -18,7 +18,7 @@ from gwf_manager import Manager, Sample, SampleList
 
 gwf = Workflow()
 
-samples = SampleList.from_path("input/samples.json")
+samples = SampleList.from_file("input/samples.json")
 
 with Manager(gwf) as manager:
     for sample in samples:
@@ -161,7 +161,7 @@ A `Sample` bundles a sample name with one or more sequencing data entries and op
 ```python
 from gwf_manager import Sample, SampleList
 
-samples = SampleList.from_path("input/samples.json")
+samples = SampleList.from_file("input/samples.json")
 ```
 
 **Sequencing data types** — built-in and registered automatically:
@@ -318,7 +318,7 @@ class AnalysisKind(Enum):
 
 setup_analysis_module(kind=AnalysisKind)
 
-analyses = AnalysisList.from_path("input/analyses.json", sample_list=samples)
+analyses = AnalysisList.from_file("input/analyses.json", sample_list=samples)
 ```
 
 **Addons** let you attach optional flags or features to analyses:
