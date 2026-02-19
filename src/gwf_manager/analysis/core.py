@@ -14,7 +14,10 @@ analysis_kind_enum: Enum | None = None
 class Analysis:
     kind: Enum = attrs.field(converter=lambda k: analysis_kind_enum[k])
     addons: AddonDict = attrs.field(factory=AddonDict, converter=AddonDict)
-    samples: SampleList = attrs.field(factory=SampleList, converter=SampleList)
+    samples: SampleList = attrs.field(
+        factory=SampleList,
+        converter=lambda x: x if isinstance(x, SampleList) else SampleList(*x),
+    )
 
 
 class AnalysisList(list[Analysis]):
