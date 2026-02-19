@@ -74,9 +74,6 @@ def _get_or_create_conda_env(yaml: Path, envs_dir: Path) -> Path:
     return Conda(env=str(env.resolve()))
 
 
-executor_registry = InstanceRegistry(type=object)
-
-
 def setup_conda_executors(
     registry: InstanceRegistry,
     config_dir: str | Path | None,
