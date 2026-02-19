@@ -55,10 +55,10 @@ def _get_or_create_conda_env(yaml: Path, envs_dir: Path) -> Path:
         raise FileNotFoundError(f"Conda environment YAML not found at {yaml}")
 
     name = yaml.stem
-    md5 = hashlib.md5(yaml.read_bytes()).hexdigest()
+    sha256 = hashlib.sha256(yaml.read_bytes()).hexdigest()
 
     # Create the environment if it doesn't already exist
-    if not (env := envs_dir.joinpath(f"{name}_{md5}")).exists():
+    if not (env := envs_dir.joinpath(f"{name}_{sha256}")).exists():
         subprocess.check_call(
             [
                 str(_conda_exe),
