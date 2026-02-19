@@ -13,7 +13,6 @@ def setup_analysis_module(
     Args:
         kind: Enum class defining analysis kinds.
         addons: Optional dict mapping addon keys to Enum classes.
-        analysis_cls: Class to use for Analysis instances (default: Analysis).
     """
     global analysis_kind_enum
     analysis_kind_enum = kind
