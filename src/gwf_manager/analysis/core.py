@@ -7,6 +7,9 @@ from .addon import AddonDict, addon_registry
 from ..sample import SampleList
 
 
+analysis_kind_enum: Enum | None = None
+
+
 @attrs.define
 class Analysis:
     kind: Enum = attrs.field(converter=lambda k: analysis_kind_enum[k])
@@ -14,20 +17,18 @@ class Analysis:
     samples: SampleList = attrs.field(factory=SampleList, converter=SampleList)
 
 
-analysis_type: type[Analysis] = Analysis
-analysis_kind_enum: Enum | None = None
-
-
 class AnalysisList(list[Analysis]):
     def __init__(
         self,
         sample_list: SampleList,
         *analyses: dict | Analysis,
+        analysis_type: type[Analysis] = Analysis,
     ):
         assert (
             analysis_kind_enum is not None
         ), "Analysis kind enum must be set up before creating AnalysisList instances."
 
+        self.analysis_type = analysis_type
         self.sample_list = sample_list
 
         parsed_analyses = []
@@ -36,18 +37,15 @@ class AnalysisList(list[Analysis]):
                 parsed_analyses.append(datum)
                 continue
 
-            samples = SampleList(
-                *(self.sample_list.get_by_name(s) for s in datum.pop("samples")),
-                sample_type=self.sample_list.sample_type,
-            )
+            samples = self.sample_list.subset_by_names(*datum.pop("samples", []))
             addons = {
                 k: [addon_registry[k][v] for v in li]
                 for k, li in datum.pop("addons", {}).items()
             }
 
             parsed_analyses.append(
-                analysis_type(
-                    kind=analysis_kind_enum[datum.pop("kind")],
+                self.analysis_type(
+                    kind=datum.pop("kind"),
                     addons=addons,
                     samples=samples,
                     **datum,
@@ -56,7 +54,12 @@ class AnalysisList(list[Analysis]):
         super().__init__(parsed_analyses)
 
     @classmethod
-    def from_path(cls, path: str | Path, sample_list: SampleList) -> "AnalysisList":
+    def from_file(
+        cls,
+        path: str | Path,
+        sample_list: SampleList,
+        analysis_type: type[Analysis] = Analysis,
+    ) -> "AnalysisList":
         """
         Create an AnalysisList from a JSON file.
 
@@ -68,7 +71,7 @@ class AnalysisList(list[Analysis]):
             An AnalysisList instance containing the analyses specified in the JSON file.
         """
         analyses = json.loads(Path(path).read_text())
-        return cls(sample_list=sample_list, *analyses)
+        return cls(sample_list=sample_list, *analyses, analysis_type=analysis_type)
 
     def subset_by_kind(
         self,
@@ -85,6 +88,7 @@ class AnalysisList(list[Analysis]):
         return AnalysisList(
             sample_list=self.sample_list,
             *[a for a in self if a.kind in analysis_kind],
+            analysis_type=self.analysis_type,
         )
 
     def subset_by_addon(
@@ -102,4 +106,5 @@ class AnalysisList(list[Analysis]):
         return AnalysisList(
             sample_list=self.sample_list,
             *[a for a in self if a.addons.has(*addon)],
+            analysis_type=self.analysis_type,
         )

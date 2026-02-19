@@ -59,9 +59,6 @@ class Sample:
         return path
 
 
-sample_type: type[Sample] = Sample
-
-
 class SampleList(list[Sample]):
     def __init__(self, *args: Sample | dict, sample_type=Sample):
         self.sample_type = sample_type
@@ -77,7 +74,7 @@ class SampleList(list[Sample]):
             self._sample_dict[sample.name] = sample
 
     @classmethod
-    def from_path(cls, path: str | Path, sample_type=Sample) -> "SampleList":
+    def from_file(cls, path: str | Path, sample_type=Sample) -> "SampleList":
         data = json.loads(Path(path).read_text())
         if not isinstance(data, list):
             raise TypeError(
