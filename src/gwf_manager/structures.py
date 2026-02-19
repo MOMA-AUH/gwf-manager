@@ -58,9 +58,15 @@ class Configuration(dict):
 
     def load(self, path: str | Path) -> None:
         if self:
-            logging.debug("Configuration has already been set and cannot be modified.")
+            logging.warning(
+                "Configuration has already been set and cannot be modified."
+            )
             return
-        d = json.loads(Path(path).read_text())
+        path = Path(path)
+        if not path.exists():
+            logging.warning("Configuration file not found: %s", path)
+            return
+        d = json.loads(path.read_text())
         if not isinstance(d, dict):
             raise TypeError(
                 "Configuration file must contain a JSON object at the top level."
