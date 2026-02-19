@@ -2,7 +2,7 @@ import attrs
 import re
 
 from ..path import HashablePath
-from ..registry import SubclassRegistry
+from ..structures import SubclassRegistry
 
 
 @attrs.define

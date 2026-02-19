@@ -2,11 +2,11 @@ import attrs
 from collections import defaultdict
 from pathlib import Path
 
-from .config import parameters, reference, resources
 from .executors import setup_conda_executors
 from .gwf_imports import AnonymousTarget, Workflow
-from .utilities import legalize_for_gwf
 from .path import HashablePath, TemporaryPath
+from .structures import parameters, reference, resources
+from .utilities import legalize_for_gwf
 
 
 @attrs.define

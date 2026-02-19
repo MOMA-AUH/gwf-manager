@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 from typing import Iterable
 
-from .registry import InstanceRegistry
+from .structures import InstanceRegistry
 
 
 YAML_EXTENSIONS = ("*.yaml", "*.yml")

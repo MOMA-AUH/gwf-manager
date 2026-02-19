@@ -2,7 +2,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import Iterable, Any
 
-from ..registry import SubclassRegistry
+from ..structures import SubclassRegistry
 
 
 addon_registry = SubclassRegistry(type=Enum)

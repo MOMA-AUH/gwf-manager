@@ -1,6 +1,6 @@
 from enum import Enum
 
-from ..registry import SubclassRegistry
+from ..structures import SubclassRegistry
 
 
 metadata_registry = SubclassRegistry(type=Enum)

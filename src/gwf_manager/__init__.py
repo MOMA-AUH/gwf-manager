@@ -6,10 +6,11 @@ except ImportError:
     logging.debug("GWF not found. Some functionality may be limited.")
 
 from .analysis import Analysis, AnalysisList, setup_analysis_module
-from .config import parameters, reference, resources
 from .decorators import cache_task, use_wd_scratch, use_custom_scratch
 from .manager import Manager
 from .sample import Sample, SampleList, setup_sample_module
+from .structures import parameters, reference, resources
+
 
 __all__ = [
     "Analysis",
