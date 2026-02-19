@@ -180,17 +180,11 @@ def _legalize_template(template: AnonymousTarget) -> AnonymousTarget:
 
 
 def _create_clean_up_target(manager: Manager):
-    targets: list[AnonymousTarget] = []
+    all_task_targets: set[AnonymousTarget] = set()
+    for task in manager.tasks.values():
+        all_task_targets.update(task.targets)
 
-    def _is_task_target(target: AnonymousTarget) -> bool:
-        for task in manager.tasks.values():
-            if target in task.targets:
-                return True
-        return False
-
-    for target in manager.targets.values():
-        if not _is_task_target(target):
-            targets.append(target)
+    targets = [t for t in manager.targets.values() if t not in all_task_targets]
 
     inputs = []
     for target in targets:
