@@ -12,6 +12,7 @@ DEFAULTS = {
     "reference_json": "input/reference.json",
     "resources_json": "input/resources.json",
     "conda_config_dir": "input/conda",
+    "conda_envs_dir": None,
 }
 
 
