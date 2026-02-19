@@ -16,8 +16,14 @@ class AddonDict(defaultdict[str, set[Enum]]):
     - Multiple values per key are supported.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, data: dict | None = None) -> None:
         super().__init__(set)
+        if data:
+            for key, values in data.items():
+                if isinstance(values, (str, Enum)):
+                    self.add(key, values)
+                else:
+                    self.add_many(key, values)
 
     def __setitem__(self, key: str, value: str | Enum | Iterable[str | Enum]) -> None:
         self[key].clear()
@@ -25,12 +31,12 @@ class AddonDict(defaultdict[str, set[Enum]]):
         if isinstance(value, (str, Enum)):
             self.add(key, value)
         else:
-            self.update(key, value)
+            self.add_many(key, value)
 
     def add(self, key: str, value: str | Enum) -> None:
         super().__getitem__(key).add(_normalize(key, value))
 
-    def update(self, key: str, values: Iterable[str | Enum]) -> None:
+    def add_many(self, key: str, values: Iterable[str | Enum]) -> None:
         for value in values:
             self.add(key, value)
 
