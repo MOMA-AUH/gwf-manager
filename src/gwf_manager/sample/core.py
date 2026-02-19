@@ -145,7 +145,7 @@ class SampleList(list[Sample]):
         result = SampleList(sample_type=self.sample_type)
         for sample in self:
             if all(
-                sample.metadata.get(k) == metadata_registry[k](v)
+                sample.metadata.get(k) == metadata_registry[k][v]
                 for k, v in criteria.items()
             ):
                 result.append(sample)
