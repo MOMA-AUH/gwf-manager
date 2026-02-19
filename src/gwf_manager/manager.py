@@ -1,8 +1,9 @@
 import attrs
 from collections import defaultdict
+from pathlib import Path
 
 from .gwf_imports import AnonymousTarget, Workflow
-from .path import HashablePath, TemporaryPath
+from .path import TemporaryPath
 from .utilities import legalize_for_gwf
 
 
@@ -103,8 +104,8 @@ class Manager:
         self,
         *parts: str,
         mkdir: bool = False,
-    ) -> HashablePath:
-        path = HashablePath("output", *parts)
+    ) -> Path:
+        path = Path("output", *parts)
         if mkdir:
             path.mkdir(parents=True, exist_ok=True)
         return path
@@ -113,8 +114,8 @@ class Manager:
         self,
         *parts: str,
         mkdir: bool = False,
-    ) -> HashablePath:
-        path = HashablePath("output", *parts)
+    ) -> Path:
+        path = Path("output", *parts)
         if mkdir:
             path.parent.mkdir(parents=True, exist_ok=True)
         return path

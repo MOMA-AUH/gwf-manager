@@ -1,7 +1,7 @@
 import attrs
 import re
+from pathlib import Path
 
-from ..path import HashablePath
 from ..structures import SubclassRegistry
 
 
@@ -59,10 +59,10 @@ class SequencingData:
 
 @attrs.define
 class SingleEndFASTQ(SequencingData):
-    file: HashablePath = attrs.field(converter=HashablePath)
+    file: Path = attrs.field(converter=Path)
 
     @file.validator
-    def check_file(self, attribute, value: HashablePath):
+    def check_file(self, attribute, value: Path):
         if not re.search(r"\.(fastq|fq)(\.gz)?$", value.name.lower()):
             raise ValueError(
                 f"FASTQ file must have .fastq, .fastq.gz, .fq, or .fq.gz extension, got: {value.suffix}"
@@ -71,18 +71,18 @@ class SingleEndFASTQ(SequencingData):
 
 @attrs.define
 class PairedEndFASTQ(SequencingData):
-    r1: HashablePath = attrs.field(converter=HashablePath)
-    r2: HashablePath = attrs.field(converter=HashablePath)
+    r1: Path = attrs.field(converter=Path)
+    r2: Path = attrs.field(converter=Path)
 
     @r1.validator
-    def check_r1(self, attribute, value: HashablePath):
+    def check_r1(self, attribute, value: Path):
         if not re.search(r"\.(fastq|fq)(\.gz)?$", value.name.lower()):
             raise ValueError(
                 f"FASTQ r1 file must have .fastq, .fastq.gz, .fq, or .fq.gz extension, got: {value.suffix}"
             )
 
     @r2.validator
-    def check_r2(self, attribute, value: HashablePath):
+    def check_r2(self, attribute, value: Path):
         if not re.search(r"\.(fastq|fq)(\.gz)?$", value.name.lower()):
             raise ValueError(
                 f"FASTQ r2 file must have .fastq, .fastq.gz, .fq, or .fq.gz extension, got: {value.suffix}"
@@ -91,12 +91,12 @@ class PairedEndFASTQ(SequencingData):
 
 @attrs.define
 class Spring(SequencingData):
-    files: list[HashablePath] = attrs.field(
-        factory=list, converter=lambda x: [HashablePath(f) for f in x]
+    files: list[Path] = attrs.field(
+        factory=list, converter=lambda x: [Path(f) for f in x]
     )
 
     @files.validator
-    def check_files(self, attribute, value: list[HashablePath]):
+    def check_files(self, attribute, value: list[Path]):
         if not value:
             raise ValueError("Spring files list cannot be empty.")
         if not all(re.search(r"\.spring$", f.name.lower()) for f in value):
@@ -108,10 +108,10 @@ class Spring(SequencingData):
 
 @attrs.define
 class UBAM(SequencingData):
-    file: HashablePath = attrs.field(converter=HashablePath)
+    file: Path = attrs.field(converter=Path)
 
     @file.validator
-    def check_file(self, attribute, value: HashablePath):
+    def check_file(self, attribute, value: Path):
         if not re.search(r"\.bam$", value.name.lower()):
             raise ValueError(
                 f"Unmapped BAM file must have .bam extension, got: {value.suffix}"
@@ -120,10 +120,10 @@ class UBAM(SequencingData):
 
 @attrs.define
 class UCRAM(SequencingData):
-    file: HashablePath = attrs.field(converter=HashablePath)
+    file: Path = attrs.field(converter=Path)
 
     @file.validator
-    def check_file(self, attribute, value: HashablePath):
+    def check_file(self, attribute, value: Path):
         if not re.search(r"\.cram$", value.name.lower()):
             raise ValueError(
                 f"Unmapped CRAM file must have .cram extension, got: {value.suffix}"

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .metadata import MetadataDict, metadata_registry
 from .sequencing_data import SequencingDataList
-from ..path import HashablePath, TemporaryPath
+from ..path import TemporaryPath
 from ..utilities import legalize_for_gwf
 
 
@@ -46,8 +46,8 @@ class Sample:
             sha256.update(str(seq_info).encode("utf-8"))
         return sha256.hexdigest()
 
-    def output_file(self, *parts: str, mkdir: bool = False) -> HashablePath:
-        path = HashablePath("output", "samples", self.name, *parts)
+    def output_file(self, *parts: str, mkdir: bool = False) -> Path:
+        path = Path("output", "samples", self.name, *parts)
         if mkdir:
             path.parent.mkdir(parents=True, exist_ok=True)
         return path
