@@ -1,6 +1,7 @@
 import attrs
 import hashlib
 import json
+from enum import Enum
 from pathlib import Path
 
 from .metadata import MetadataDict, metadata_registry
@@ -133,20 +134,18 @@ class SampleList(list[Sample]):
             sample_type=self.sample_type,
         )
 
-    def subset_by_metadata(self, **criteria: str) -> "SampleList":
+    def subset_by_metadata(self, *metadata: Enum) -> "SampleList":
         """Subset samples by metadata values.
 
         Args:
-            **criteria (str): Key-value pairs of metadata fields and their desired values.
+            *metadata (Enum): Metadata values to filter samples by.
 
         Returns:
             A SampleList of Sample instances that match all specified metadata criteria.
         """
         result = SampleList(sample_type=self.sample_type)
         for sample in self:
-            if all(
-                sample.metadata.get(k) == metadata_registry[k][v]
-                for k, v in criteria.items()
-            ):
+            sample_metadata = set(sample.metadata.values())
+            if all(m in sample_metadata for m in metadata):
                 result.append(sample)
         return result

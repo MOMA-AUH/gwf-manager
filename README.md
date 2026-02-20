@@ -199,7 +199,7 @@ String values in the input JSON are automatically converted to the corresponding
 
 ```python
 subset = samples.subset_by_names("SampleA", "SampleB")
-dna_samples  = samples.subset_by_metadata(material_kind="DNA")
+dna_samples  = samples.subset_by_metadata(MaterialKind.DNA)
 ```
 
 **SHA-256 checksums** — each `Sample` and `SampleList` exposes a `sha256` property derived from read group IDs, useful for change detection and caching.
