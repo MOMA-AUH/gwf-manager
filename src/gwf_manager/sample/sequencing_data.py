@@ -157,6 +157,22 @@ class SequencingDataList(list[SequencingData]):
     def subset_by_type(self, *types: type[SequencingData]) -> "SequencingDataList":
         return SequencingDataList([sd for sd in self if isinstance(sd, types)])
 
+    def subset_by_attrs(self, **kwargs) -> "SequencingDataList":
+        return SequencingDataList(
+            [
+                sd
+                for sd in self
+                if all(
+                    (
+                        getattr(sd, k) in v
+                        if isinstance(v, (list, tuple, set))
+                        else getattr(sd, k) == v
+                    )
+                    for k, v in kwargs.items()
+                )
+            ]
+        )
+
 
 def _convert_to_sequencing_data(datum: dict | SequencingData) -> SequencingData:
     # Already converted
