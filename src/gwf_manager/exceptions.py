@@ -1,8 +1,12 @@
 """Custom exception hierarchy for gwf-manager."""
 
 
-class GwfManagerError(Exception):
+class GwfManagerError(BaseException):
     """Base exception for gwf-manager."""
+
+
+class IncorrectFileFormatError(GwfManagerError):
+    """Raised when a file is not in the expected format."""
 
 
 class DuplicateTargetError(GwfManagerError):

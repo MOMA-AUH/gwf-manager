@@ -2,6 +2,7 @@ import attrs
 import re
 from pathlib import Path
 
+from ..exceptions import IncorrectFileFormatError
 from ..structures import SubclassRegistry
 
 
@@ -64,7 +65,7 @@ class SingleEndFASTQ(SequencingData):
     @file.validator
     def check_file(self, attribute, value: Path):
         if not re.search(r"\.(fastq|fq)(\.gz)?$", value.name.lower()):
-            raise ValueError(
+            raise IncorrectFileFormatError(
                 f"FASTQ file must have .fastq, .fastq.gz, .fq, or .fq.gz extension, got: {value.suffix}"
             )
 
@@ -77,14 +78,14 @@ class PairedEndFASTQ(SequencingData):
     @r1.validator
     def check_r1(self, attribute, value: Path):
         if not re.search(r"\.(fastq|fq)(\.gz)?$", value.name.lower()):
-            raise ValueError(
+            raise IncorrectFileFormatError(
                 f"FASTQ r1 file must have .fastq, .fastq.gz, .fq, or .fq.gz extension, got: {value.suffix}"
             )
 
     @r2.validator
     def check_r2(self, attribute, value: Path):
         if not re.search(r"\.(fastq|fq)(\.gz)?$", value.name.lower()):
-            raise ValueError(
+            raise IncorrectFileFormatError(
                 f"FASTQ r2 file must have .fastq, .fastq.gz, .fq, or .fq.gz extension, got: {value.suffix}"
             )
 
@@ -99,9 +100,9 @@ class Spring(SequencingData):
     def check_files(self, attribute, value: list[Path]):
         if not value:
             raise ValueError("Spring files list cannot be empty.")
-        if not all(re.search(r"\.spring$", f.name.lower()) for f in value):
+        if not all(f.name.lower().endswith(".spring") for f in value):
             suffixes = {f.suffix.lower() for f in value}
-            raise ValueError(
+            raise IncorrectFileFormatError(
                 f"All Spring files must have .spring extension, got: {', '.join(suffixes)}"
             )
 
@@ -113,7 +114,7 @@ class UBAM(SequencingData):
     @file.validator
     def check_file(self, attribute, value: Path):
         if not re.search(r"\.bam$", value.name.lower()):
-            raise ValueError(
+            raise IncorrectFileFormatError(
                 f"Unmapped BAM file must have .bam extension, got: {value.suffix}"
             )
 
@@ -125,7 +126,7 @@ class UCRAM(SequencingData):
     @file.validator
     def check_file(self, attribute, value: Path):
         if not re.search(r"\.cram$", value.name.lower()):
-            raise ValueError(
+            raise IncorrectFileFormatError(
                 f"Unmapped CRAM file must have .cram extension, got: {value.suffix}"
             )
 
@@ -173,8 +174,10 @@ def _convert_to_sequencing_data(datum: dict | SequencingData) -> SequencingData:
     for sequencing_data_cls in sequencing_data_registry.values():
         try:
             sd = sequencing_data_cls(**datum)
-        except TypeError:
+        except (TypeError, IncorrectFileFormatError):
             continue
         return sd
     else:
-        raise ValueError(f"Could not determine sequencing data type for: {datum}")
+        raise IncorrectFileFormatError(
+            f"Could not determine sequencing data type for: {datum}"
+        )
