@@ -1,7 +1,18 @@
 import json
 import logging
+import re
+from json import JSONDecoder
 from pathlib import Path
 from typing import Any
+
+
+PATH_REGEX = re.compile(
+    r"^(?:"
+    r"[A-Za-z]:[/\\](?:[^\\/:*?\"<>|\r\n]+[/\\])*[^\\/:*?\"<>|\r\n]*"  # Windows absolute
+    r"|\\\\[^\\/:*?\"<>|\r\n]+\\[^\\/:*?\"<>|\r\n]+(?:\\[^\\/:*?\"<>|\r\n]*)*"  # Windows UNC
+    r"|\.{0,2}/(?:[^/\0]+/)*[^/\0]*"  # Unix absolute and relative
+    r")$"
+)
 
 
 class InstanceRegistry(dict):
@@ -46,6 +57,26 @@ class SubclassRegistry(dict):
         return super().__getitem__(key)
 
 
+class JSONDecoderWithPaths(JSONDecoder):
+    def __init__(self, *args, **kwargs):
+        super().__init__(
+            *args,
+            object_hook=self._object_hook_with_paths,
+            **kwargs,
+        )
+
+    @staticmethod
+    def _object_hook_with_paths(obj):
+        return {
+            key: (
+                Path(value)
+                if isinstance(value, str) and PATH_REGEX.match(value)
+                else value
+            )
+            for key, value in obj.items()
+        }
+
+
 class Configuration(dict):
     """A dictionary subclass for managing nested configurations."""
 
@@ -66,7 +97,7 @@ class Configuration(dict):
         if not path.exists():
             logging.warning("Configuration file not found: %s", path)
             return
-        d = json.loads(path.read_text())
+        d = json.loads(path.read_text(), cls=JSONDecoderWithPaths)
         if not isinstance(d, dict):
             raise TypeError(
                 "Configuration file must contain a JSON object at the top level."
