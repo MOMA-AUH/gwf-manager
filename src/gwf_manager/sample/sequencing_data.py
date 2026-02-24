@@ -92,18 +92,18 @@ class PairedEndFASTQ(SequencingData):
 
 @attrs.define
 class Spring(SequencingData):
-    files: tuple[Path, ...] = attrs.field(
+    parts: tuple[Path, ...] = attrs.field(
         factory=list, converter=lambda x: tuple([Path(f) for f in x])
     )
 
-    @files.validator
-    def check_files(self, attribute, value: list[Path]):
+    @parts.validator
+    def check_parts(self, attribute, value: tuple[Path, ...]):
         if not value:
-            raise ValueError("Spring files list cannot be empty.")
+            raise ValueError("Spring parts list cannot be empty.")
         if not all(f.name.lower().endswith(".spring") for f in value):
             suffixes = {f.suffix.lower() for f in value}
             raise IncorrectFileFormatError(
-                f"All Spring files must have .spring extension, got: {', '.join(suffixes)}"
+                f"All Spring parts must have .spring extension, got: {', '.join(suffixes)}"
             )
 
 
