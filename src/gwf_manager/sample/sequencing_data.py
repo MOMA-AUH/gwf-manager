@@ -92,8 +92,8 @@ class PairedEndFASTQ(SequencingData):
 
 @attrs.define
 class Spring(SequencingData):
-    files: list[Path] = attrs.field(
-        factory=list, converter=lambda x: [Path(f) for f in x]
+    files: tuple[Path, ...] = attrs.field(
+        factory=list, converter=lambda x: tuple([Path(f) for f in x])
     )
 
     @files.validator
