@@ -1,5 +1,6 @@
 import attrs
 import re
+from collections import defaultdict
 from pathlib import Path
 
 from ..exceptions import IncorrectFileFormatError
@@ -172,6 +173,13 @@ class SequencingDataList(list[SequencingData]):
                 )
             ]
         )
+
+    def group_by(self, *attrs: str) -> dict[tuple[object, ...], "SequencingDataList"]:
+        result = defaultdict(SequencingDataList)
+        for sd in self:
+            key = tuple(getattr(sd, attr) for attr in attrs)
+            result[key].append(sd)
+        return dict(result)
 
 
 def _convert_to_sequencing_data(datum: dict | SequencingData) -> SequencingData:
