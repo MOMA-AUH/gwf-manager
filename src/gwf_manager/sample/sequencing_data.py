@@ -174,10 +174,16 @@ class SequencingDataList(list[SequencingData]):
             ]
         )
 
-    def group_by(self, *attrs: str) -> dict[tuple[object, ...], "SequencingDataList"]:
+    def group_by(
+        self, *attrs: str
+    ) -> dict[tuple[object, ...] | object, "SequencingDataList"]:
         result = defaultdict(SequencingDataList)
         for sd in self:
-            key = tuple(getattr(sd, attr) for attr in attrs)
+            key = (
+                tuple(getattr(sd, attr) for attr in attrs)
+                if len(attrs) > 1
+                else getattr(sd, attrs[0])
+            )
             result[key].append(sd)
         return dict(result)
 
